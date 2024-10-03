@@ -6,14 +6,17 @@ import zipfile
 st.set_page_config(page_title="File Processor", page_icon="📄", layout="wide")
 
 def process_file_pair(txt_file, json_file, selected_tags):
-    # Read the content of the text file
     txt_content = txt_file.getvalue().decode("utf-8")
     
     try:
-        # Parse the JSON file
         json_data = json.loads(json_file.getvalue().decode("utf-8"))
         
-        # Create the new content with selected tags
+        # Handle both list and dictionary cases
+        if isinstance(json_data, list):
+            json_data = json_data[0] if json_data else {}
+        elif not isinstance(json_data, dict):
+            raise ValueError("JSON content must be either a list or a dictionary")
+
         new_content = ""
         for tag in selected_tags:
             if tag in json_data:
@@ -23,6 +26,9 @@ def process_file_pair(txt_file, json_file, selected_tags):
         return new_content
     except json.JSONDecodeError:
         st.error(f"Error parsing JSON file '{json_file.name}'. Please make sure it's a valid JSON.")
+        return None
+    except ValueError as e:
+        st.error(str(e))
         return None
 
 def process_multiple_file_pairs(txt_files, json_files, selected_tags):
@@ -48,6 +54,8 @@ def main():
             try:
                 # Process the first JSON file to get available tags
                 json_data = json.loads(json_files[0].getvalue().decode("utf-8"))
+                if isinstance(json_data, list):
+                    json_data = json_data[0] if json_data else {}
                 available_tags = list(json_data.keys())
 
                 if available_tags:
