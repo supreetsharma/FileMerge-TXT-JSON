@@ -60,6 +60,12 @@ def main():
                             processed_files = process_multiple_file_pairs(txt_files, json_files, selected_tags)
 
                             if processed_files:
+                                # Preview section
+                                st.subheader("Preview of Processed Files")
+                                for idx, (filename, content) in enumerate(processed_files):
+                                    with st.expander(f"Preview: {filename}"):
+                                        st.text_area(f"Content of {filename}", content, height=200)
+
                                 # Create a zip file containing all processed files
                                 zip_buffer = io.BytesIO()
                                 with zipfile.ZipFile(zip_buffer, "w") as zip_file:
@@ -73,10 +79,6 @@ def main():
                                     file_name="processed_files.zip",
                                     mime="application/zip"
                                 )
-
-                                # Display preview of the first processed file
-                                st.write("Preview of the first processed file:")
-                                st.text_area("Content", processed_files[0][1], height=300)
                     else:
                         st.warning("Please select at least one tag.")
                 else:
