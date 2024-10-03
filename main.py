@@ -5,7 +5,7 @@ import zipfile
 
 st.set_page_config(page_title="File Processor", page_icon="📄", layout="wide")
 
-def process_file_pair(txt_file, json_file, selected_tags):
+def process_file_pair(txt_file, json_file, selected_tags, custom_tags):
     txt_content = txt_file.getvalue().decode("utf-8")
     
     try:
@@ -21,6 +21,11 @@ def process_file_pair(txt_file, json_file, selected_tags):
         for tag in selected_tags:
             if tag in json_data:
                 new_content += f"{tag}: {json_data[tag]}\n"
+        
+        # Add custom tags to the content
+        if custom_tags:
+            new_content += f"Custom Tags: {', '.join(custom_tags)}\n"
+        
         new_content += "\n" + txt_content
         
         return new_content
@@ -31,17 +36,20 @@ def process_file_pair(txt_file, json_file, selected_tags):
         st.error(str(e))
         return None
 
-def process_multiple_file_pairs(txt_files, json_files, selected_tags):
+def process_multiple_file_pairs(txt_files, json_files, selected_tags, custom_tags):
     processed_files = []
     for txt_file, json_file in zip(txt_files, json_files):
-        new_content = process_file_pair(txt_file, json_file, selected_tags)
+        new_content = process_file_pair(txt_file, json_file, selected_tags, custom_tags)
         if new_content:
-            processed_files.append((f"processed_{txt_file.name}", new_content))
+            # Include custom tags in the filename
+            tags_string = "_".join(custom_tags).replace(" ", "-") if custom_tags else "no-tags"
+            new_filename = f"processed_{tags_string}_{txt_file.name}"
+            processed_files.append((new_filename, new_content))
     return processed_files
 
 def main():
     st.title("📄 File Processor")
-    st.write("Upload multiple .txt and .json file pairs, select tags, and generate new .txt files with combined content.")
+    st.write("Upload multiple .txt and .json file pairs, select tags, add custom tags, and generate new .txt files with combined content.")
 
     # File upload section
     txt_files = st.file_uploader("Upload .txt files", type="txt", accept_multiple_files=True)
@@ -62,10 +70,14 @@ def main():
                     st.write("Available tags:")
                     selected_tags = st.multiselect("Select tags to include:", available_tags)
 
-                    if selected_tags:
+                    # Add custom tags input
+                    custom_tags_input = st.text_input("Add custom tags (comma-separated):")
+                    custom_tags = [tag.strip() for tag in custom_tags_input.split(",")] if custom_tags_input else []
+
+                    if selected_tags or custom_tags:
                         if st.button("Process Files"):
                             # Process files and generate new content
-                            processed_files = process_multiple_file_pairs(txt_files, json_files, selected_tags)
+                            processed_files = process_multiple_file_pairs(txt_files, json_files, selected_tags, custom_tags)
 
                             if processed_files:
                                 # Preview section
@@ -88,7 +100,7 @@ def main():
                                     mime="application/zip"
                                 )
                     else:
-                        st.warning("Please select at least one tag.")
+                        st.warning("Please select at least one tag or add custom tags.")
                 else:
                     st.error("No tags found in the JSON files.")
             except json.JSONDecodeError:
