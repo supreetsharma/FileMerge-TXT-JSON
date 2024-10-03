@@ -55,9 +55,19 @@ def main():
     txt_files = st.file_uploader("Upload .txt files", type="txt", accept_multiple_files=True)
     json_files = st.file_uploader("Upload .json files", type="json", accept_multiple_files=True)
 
-    if txt_files and json_files:
-        if len(txt_files) != len(json_files):
-            st.error("The number of .txt files must match the number of .json files.")
+    if txt_files or json_files:
+        txt_count = len(txt_files)
+        json_count = len(json_files)
+
+        if txt_count != json_count:
+            st.error(f"Mismatched file counts: {txt_count} .txt files and {json_count} .json files.")
+            if txt_count > json_count:
+                st.warning(f"Please upload {txt_count - json_count} more .json file(s) to match the number of .txt files.")
+            else:
+                st.warning(f"Please upload {json_count - txt_count} more .txt file(s) to match the number of .json files.")
+            st.info("You can remove files by clicking the 'X' next to their names in the file uploader.")
+        elif txt_count == 0:
+            st.warning("Please upload both .txt and .json files to proceed.")
         else:
             try:
                 # Process the first JSON file to get available tags
@@ -105,8 +115,6 @@ def main():
                     st.error("No tags found in the JSON files.")
             except json.JSONDecodeError:
                 st.error("Error parsing JSON files. Please make sure they are valid JSON.")
-    else:
-        st.info("Please upload both .txt and .json files to proceed.")
 
 if __name__ == "__main__":
     main()
