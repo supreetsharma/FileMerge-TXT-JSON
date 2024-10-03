@@ -79,60 +79,75 @@ def main():
         else:
             if txt_count > 0 and json_count > 0:
                 matched_pairs = match_file_pairs(txt_files, json_files)
-                if matched_pairs:
+                
+                # Identify unmatched files
+                unmatched_txt = [file for file in txt_files if file not in [txt for txt, _ in matched_pairs]]
+                unmatched_json = [file for file in json_files if file not in [json for _, json in matched_pairs]]
+                
+                # Display warnings for unmatched files
+                if unmatched_txt:
+                    st.warning(f"The following .txt files have no matching .json files: {', '.join([file.name for file in unmatched_txt])}")
+                if unmatched_json:
+                    st.warning(f"The following .json files have no matching .txt files: {', '.join([file.name for file in unmatched_json])}")
+                
+                # Update the existing warning message for when no matching pairs are found
+                if not matched_pairs:
+                    st.error("No matching file pairs found. Please ensure file names (excluding extensions) are the same for .txt and .json files.")
+                else:
                     st.subheader("Matched File Pairs")
                     table_data = [{"Text File": txt.name, "JSON File": json.name} for txt, json in matched_pairs]
                     st.table(table_data)
-                else:
-                    st.warning("No matching file pairs found. Please ensure file names (excluding extensions) are the same for .txt and .json files.")
 
             try:
                 # Process the first JSON file to get available tags
-                json_data = json.loads(json_files[0].getvalue().decode("utf-8"))
-                if isinstance(json_data, list):
-                    json_data = json_data[0] if json_data else {}
-                available_tags = list(json_data.keys())
+                if json_files:
+                    json_data = json.loads(json_files[0].getvalue().decode("utf-8"))
+                    if isinstance(json_data, list):
+                        json_data = json_data[0] if json_data else {}
+                    available_tags = list(json_data.keys())
 
-                if available_tags:
-                    st.write("Available tags:")
-                    selected_tags = st.multiselect("Select tags to include:", available_tags)
+                    if available_tags:
+                        st.write("Available tags:")
+                        selected_tags = st.multiselect("Select tags to include:", available_tags)
 
-                    # Add custom tags input
-                    custom_tags_input = st.text_input("Add custom tags (comma-separated):")
-                    custom_tags = [tag.strip() for tag in custom_tags_input.split(",")] if custom_tags_input else []
+                        # Add custom tags input
+                        custom_tags_input = st.text_input("Add custom tags (comma-separated):")
+                        custom_tags = [tag.strip() for tag in custom_tags_input.split(",")] if custom_tags_input else []
 
-                    if selected_tags or custom_tags:
-                        if st.button("Process Files"):
-                            if matched_pairs:
-                                # Process files and generate new content
-                                processed_files = process_multiple_file_pairs([txt for txt, _ in matched_pairs], [json for _, json in matched_pairs], selected_tags, custom_tags)
+                        if selected_tags or custom_tags:
+                            if st.button("Process Files"):
+                                if matched_pairs:
+                                    # Process files and generate new content
+                                    processed_files = process_multiple_file_pairs([txt for txt, _ in matched_pairs], [json for _, json in matched_pairs], selected_tags, custom_tags)
 
-                                if processed_files:
-                                    # Preview section
-                                    st.subheader("Preview of Processed Files")
-                                    for idx, (filename, content) in enumerate(processed_files):
-                                        with st.expander(f"Preview: {filename}"):
-                                            st.text_area(f"Content of {filename}", content, height=200)
+                                    if processed_files:
+                                        # Preview section
+                                        st.subheader("Preview of Processed Files")
+                                        for idx, (filename, content) in enumerate(processed_files):
+                                            with st.expander(f"Preview: {filename}"):
+                                                st.text_area(f"Content of {filename}", content, height=200)
 
-                                    # Create a zip file containing all processed files
-                                    zip_buffer = io.BytesIO()
-                                    with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-                                        for filename, content in processed_files:
-                                            zip_file.writestr(filename, content)
+                                        # Create a zip file containing all processed files
+                                        zip_buffer = io.BytesIO()
+                                        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+                                            for filename, content in processed_files:
+                                                zip_file.writestr(filename, content)
 
-                                    # Provide download option for the zip file
-                                    st.download_button(
-                                        label="Download Processed Files (ZIP)",
-                                        data=zip_buffer.getvalue(),
-                                        file_name="processed_files.zip",
-                                        mime="application/zip"
-                                    )
-                            else:
-                                st.error("No matching file pairs found. Please ensure file names (excluding extensions) are the same for .txt and .json files.")
+                                        # Provide download option for the zip file
+                                        st.download_button(
+                                            label="Download Processed Files (ZIP)",
+                                            data=zip_buffer.getvalue(),
+                                            file_name="processed_files.zip",
+                                            mime="application/zip"
+                                        )
+                                else:
+                                    st.error("No matching file pairs found. Please ensure file names (excluding extensions) are the same for .txt and .json files.")
+                        else:
+                            st.warning("Please select at least one tag or add custom tags.")
                     else:
-                        st.warning("Please select at least one tag or add custom tags.")
+                        st.error("No tags found in the JSON files.")
                 else:
-                    st.error("No tags found in the JSON files.")
+                    st.error("Please upload at least one JSON file to proceed.")
             except json.JSONDecodeError:
                 st.error("Error parsing JSON files. Please make sure they are valid JSON.")
 
